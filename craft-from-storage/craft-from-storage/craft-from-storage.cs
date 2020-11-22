@@ -15,6 +15,7 @@ namespace azzmurr.craftFromStorage
             harmony = new Harmony("com.azzmurr.craft-from-storage");
             harmony.PatchAll(Assembly.GetExecutingAssembly());
             Debug.Log("Craft From Storage Mod has been loaded!");
+            CraftFromStorageManager.Start();
         }
 
         public void OnModUnload()
@@ -97,6 +98,13 @@ namespace azzmurr.craftFromStorage
     class CraftFromStorageManager
     {
         static private Storage_Small storage = null;
+
+        static public void Start() {
+            Storage_Small storage = RAPI.GetLocalPlayer().StorageManager.currentStorage;
+            if (storage != null) {
+                CraftFromStorageManager.setOpenedStorage(storage);
+            }
+        }
 
         static public bool isUnlimitedResources()
         {
