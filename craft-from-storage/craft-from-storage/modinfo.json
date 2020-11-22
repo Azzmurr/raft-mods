@@ -2,11 +2,11 @@
   "name": "craft-from-storage",
   "author": "Azzmurr",
   "description": "Now you will have the possibility to craft even your ingredients are in storage",
-  "version": "1.0.1",
+  "version": "1.1.1",
   "license": "MIT",
   "icon": "icon.png",
   "banner": "banner.jpg",
-  "gameVersion": "1.0",
+  "gameVersion": "12.01",
   "updateUrl": "https://www.raftmodding.com/api/v1/mods/craft-from-storage/version.txt",
   "isModPermanent": false,
   "excludedFiles": []
