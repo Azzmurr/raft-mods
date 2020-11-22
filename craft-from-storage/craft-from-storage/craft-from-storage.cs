@@ -15,7 +15,6 @@ namespace azzmurr.craftFromStorage
             harmony = new Harmony("com.azzmurr.craft-from-storage");
             harmony.PatchAll(Assembly.GetExecutingAssembly());
             Debug.Log("Craft From Storage Mod has been loaded!");
-            CraftFromStorageManager.Start();
         }
 
         public void OnModUnload()
@@ -23,25 +22,6 @@ namespace azzmurr.craftFromStorage
             Debug.Log("Craft From Storage Mod has been unloaded!");
             harmony.UnpatchAll("com.azzmurr.craft-from-storage");
             Destroy(gameObject);
-        }
-    }
-
-
-    [HarmonyPatch(typeof(StorageManager), "OpenStorage")]
-    class OpenStoragePatch
-    {
-        static void Postfix(ref Storage_Small storage)
-        {
-            CraftFromStorageManager.setOpenedStorage(storage);
-        }
-    }
-
-    [HarmonyPatch(typeof(StorageManager), "CloseStorage")]
-    class CloseStoragePatch
-    {
-        static void Postfix()
-        {
-            CraftFromStorageManager.removeOpenedStorage();
         }
     }
 
@@ -63,7 +43,7 @@ namespace azzmurr.craftFromStorage
         static void Postfix(PlayerInventory inventory, BuildingUI_CostBox __instance)
         {
             if (!CraftFromStorageManager.isUnlimitedResources()) {
-                __instance.SetAmount(__instance.GetAmount() + CraftFromStorageManager.getItemCountInInventory(__instance, null));
+                __instance.SetAmount(__instance.GetAmount() + InventoryManager.getItemCountInInventory(__instance, null));
             }
         }
     }
@@ -95,71 +75,30 @@ namespace azzmurr.craftFromStorage
         }
     }
 
-    class CraftFromStorageManager
-    {
-        static private Storage_Small storage = null;
-
-        static public void Start() {
-            Storage_Small storage = RAPI.GetLocalPlayer().StorageManager.currentStorage;
-            if (storage != null) {
-                CraftFromStorageManager.setOpenedStorage(storage);
-            }
-        }
-
-        static public bool isUnlimitedResources()
-        {
-            return GameModeValueManager.GetCurrentGameModeValue().playerSpecificVariables.unlimitedResources;
+    class InventoryManager {
+        static public Inventory getPlayerInventory() {
+            return RAPI.GetLocalPlayer().Inventory;
         }
 
         static public Inventory getStorageInventory()
         {
-            return CraftFromStorageManager.storage ? CraftFromStorageManager.storage.GetInventoryReference() : null;
+            Storage_Small storage = RAPI.GetLocalPlayer().StorageManager.currentStorage;
+            return storage != null ? storage.GetInventoryReference() : null;
         }
 
         static public bool isStorageInventoryOpened()
         {
-            return CraftFromStorageManager.getStorageInventory() != null;
+            return InventoryManager.getStorageInventory() != null;
         }
-
-        static private bool isInventorySameAsOpenedStorageInventory(Inventory inventory)
+        
+        static public bool isInventorySameAsOpenedStorageInventory(Inventory inventory)
         {
-            return CraftFromStorageManager.getStorageInventory() == inventory;
-        }
-
-        static public bool setOpenedStorage(Storage_Small storage)
-        {
-            if (storage != null)
-            {
-                CraftFromStorageManager.storage = storage;
-                return true;
-            }
-
-            return false;
-        }
-
-        static public void removeOpenedStorage()
-        {
-            CraftFromStorageManager.storage = null;
-        }
-
-        static public bool enoughInStorageInventory(bool enouthInPlayerInventory, CostMultiple costMultiple, Inventory inventoryToCheck)
-        {
-            bool enough = enouthInPlayerInventory;
-
-            if (!CraftFromStorageManager.isUnlimitedResources())
-            {
-                if (enough == false && CraftFromStorageManager.isStorageInventoryOpened() && !CraftFromStorageManager.isInventorySameAsOpenedStorageInventory(inventoryToCheck))
-                {
-                    enough = costMultiple.HasEnoughInInventory(CraftFromStorageManager.getStorageInventory());
-                }
-            }
-
-            return enough;
+            return InventoryManager.getStorageInventory() == inventory;
         }
 
         static public int getItemCountInInventory(BuildingUI_CostBox costBox, Inventory inventory)
         {
-            Inventory actualInventory = inventory != null ? inventory : CraftFromStorageManager.getStorageInventory();
+            Inventory actualInventory = inventory != null ? inventory : InventoryManager.getStorageInventory();
             List<Item_Base> items = CraftFromStorageManager.getItemsFromCostBox(costBox);
             int itemCount = 0;
 
@@ -179,7 +118,7 @@ namespace azzmurr.craftFromStorage
 
         static public int getItemCountInInventory(CostMultiple costMultiple, Inventory inventory)
         {
-            Inventory actualInventory = inventory != null ? inventory : CraftFromStorageManager.getStorageInventory();
+            Inventory actualInventory = inventory != null ? inventory : InventoryManager.getStorageInventory();
             Item_Base[] items = costMultiple.items;
             int itemCount = 0;
 
@@ -196,6 +135,30 @@ namespace azzmurr.craftFromStorage
 
             return itemCount;
         }
+    }
+
+    class CraftFromStorageManager
+    {
+        static public bool isUnlimitedResources()
+        {
+            return GameModeValueManager.GetCurrentGameModeValue().playerSpecificVariables.unlimitedResources;
+        }
+
+    
+        static public bool enoughInStorageInventory(bool enouthInPlayerInventory, CostMultiple costMultiple, Inventory inventoryToCheck)
+        {
+            bool enough = enouthInPlayerInventory;
+
+            if (!CraftFromStorageManager.isUnlimitedResources())
+            {
+                if (enough == false && InventoryManager.isStorageInventoryOpened() && !InventoryManager.isInventorySameAsOpenedStorageInventory(inventoryToCheck))
+                {
+                    enough = costMultiple.HasEnoughInInventory(InventoryManager.getStorageInventory());
+                }
+            }
+
+            return enough;
+        }
 
         static public List<Item_Base> getItemsFromCostBox(BuildingUI_CostBox costBox)
         {
@@ -206,14 +169,15 @@ namespace azzmurr.craftFromStorage
         {
             if (!CraftFromStorageManager.isUnlimitedResources())
             {
-                Inventory storageInventory = CraftFromStorageManager.getStorageInventory();
-                Inventory playerInventory = RAPI.GetLocalPlayer().Inventory;
+                Inventory storageInventory = InventoryManager.getStorageInventory();
+                Inventory playerInventory = InventoryManager.getPlayerInventory();
+
                 if (storageInventory != null)
                 {
                     for (int i = 0; i < (int)costMultipleArray.Length; i++)
                     {
                         CostMultiple costMultiple = costMultipleArray[i];
-                        int num = costMultiple.amount - CraftFromStorageManager.getItemCountInInventory(costMultiple, playerInventory);
+                        int num = costMultiple.amount - InventoryManager.getItemCountInInventory(costMultiple, playerInventory);
 
                         for (int j = 0; j < (int)costMultiple.items.Length; j++)
                         {
