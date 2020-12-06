@@ -2,7 +2,7 @@
   "name": "Trees Drops Seeds: Reanimated",
   "author": "Azzmurr + Akitake",
   "description": "Makes sure you get a seed while harvesting trees by making their drop rate ~30% per axe hit.",
-  "version": "1.0",
+  "version": "1.0.1",
   "license": "GNU AGPLv3",
   "icon": "icon.png",
   "banner": "banner.jpg",
